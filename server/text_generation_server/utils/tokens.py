@@ -15,10 +15,12 @@ from text_generation_server.utils.logits_process import (
     HeterogeneousTopPLogitsWarper,
     HeterogeneousTypicalLogitsWarper,
     HeterogeneousGrammarLogitProcessor,
+    LogitBiasProcessor,
     static_warper,
 )
 from text_generation_server.utils.watermark import WatermarkLogitsProcessor
 from transformers import PreTrainedTokenizerBase, RepetitionPenaltyLogitsProcessor
+from typing import Dict
 
 
 class NextTokenChooser:
@@ -38,6 +40,7 @@ class NextTokenChooser:
         grammar: str = "",
         grammar_type: GrammarType = GrammarType.GRAMMAR_TYPE_NONE,
         fsm_grammar_state: int = 0,
+        logit_bias: Dict[int, float] = {2: 1},
     ):
         self.watermark_processor = (
             WatermarkLogitsProcessor(device=device) if watermark else None
@@ -57,7 +60,9 @@ class NextTokenChooser:
             if grammar != ""
             else None
         )
+        self.logit_bias_processor = LogitBiasProcessor(logit_bias, device)
         self.tokenizer = tokenizer
+
 
         has_warpers = (
             (temperature is not None and temperature != 1.0)
@@ -85,6 +90,8 @@ class NextTokenChooser:
             scores = self.repetition_processor(input_ids, scores)
         if self.frequency_processor is not None:
             scores = self.frequency_processor(input_ids, scores)
+        if self.logit_bias_processor is not None:
+            scores = self.logit_bias_processor(input_ids, scores)
         if self.grammar_processor is not None:
             scores = self.grammar_processor(scores, self.fsm_grammar_state)
 
@@ -125,6 +132,7 @@ class NextTokenChooser:
             tokenizer=tokenizer,
             grammar=pb.grammar,
             grammar_type=pb.grammar_type,
+            logit_bias={2: 1},
         )
 
 
@@ -247,7 +255,8 @@ class HeterogeneousNextTokenChooser:
         tokenizer: PreTrainedTokenizerBase,
         grammars: List[str],
         grammar_types: List[int],
-        fsm_grammar_states=List[int],
+        logit_bias: Dict[int, float] = {2: 1},
+        fsm_grammar_states: List[int] = None,
     ):
         warpers = []
 
@@ -287,6 +296,8 @@ class HeterogeneousNextTokenChooser:
             else None
         )
 
+        self.logit_bias_processor = LogitBiasProcessor(logit_bias, device)
+
         if any(x != 1.0 for x in temperature):
             do_sample = [
                 sample or x != 1.0 for x, sample in zip(temperature, do_sample)
@@ -319,7 +330,7 @@ class HeterogeneousNextTokenChooser:
         self.dtype = dtype
         self.device = device
         self.tokenizer = tokenizer
-        self.fsm_grammar_states = fsm_grammar_states
+        self.fsm_grammar_states = fsm_grammar_states if fsm_grammar_states else [0] * len(grammars)
         self.grammars = grammars
         self.grammar_types = grammar_types
 
@@ -351,6 +362,8 @@ class HeterogeneousNextTokenChooser:
                 _scores = self.repetition_processor(input_ids, _scores)
             if self.frequency_processor is not None:
                 _scores = self.frequency_processor(input_ids, _scores)
+            if self.logit_bias_processor is not None:
+                _scores = self.logit_bias_processor(input_ids, _scores)
             if self.grammar_processor is not None:
                 _scores = self.grammar_processor(_scores, self.fsm_grammar_states)
             for warper in self.warpers:
@@ -497,6 +510,7 @@ class HeterogeneousNextTokenChooser:
             tokenizer=tokenizer,
             grammars=[pb_.grammar for pb_ in pb],
             grammar_types=[pb_.grammar_type for pb_ in pb],
+            logit_bias={2: 1},
             fsm_grammar_states=(
                 fsm_grammar_states if fsm_grammar_states else [0] * len(pb)
             ),

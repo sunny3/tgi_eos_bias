@@ -687,15 +687,20 @@ class CausalLM(Model):
         self, batch: CausalLMBatch
     ) -> Tuple[List[Generation], Optional[CausalLMBatch], Tuple[int, int]]:
         start = time.time_ns()
-        # slice the attention mask to the correct shape
-        attention_mask = batch.attention_mask[:, : -batch.padding_right_offset]
-
+        # Model Forward
         logits, speculative_logits, past = self.forward(
             batch.input_ids,
-            attention_mask,
+            #batch.attention_mask[:, : -batch.padding_right_offset],
+            batch.attention_mask,
             batch.position_ids,
             batch.past_key_values,
         )
+
+        # Modify logits for EOS token if less than 5 tokens generated
+        for i, stopping_criteria in enumerate(batch.stopping_criterias):
+            if stopping_criteria.current_tokens < 5:
+                # Set probability of EOS token to very low value (-100)
+                logits[i, -1, 2] = -100.0  # 2 is the EOS token ID
 
         # Results
         generations: List[Generation] = []

@@ -624,3 +624,28 @@ class HeterogeneousGrammarLogitProcessor(LogitsProcessor):
             new_fsms.append(self.fsms[i])
         self.fsms = new_fsms
         return self
+
+
+class LogitBiasProcessor(LogitsProcessor):
+    """
+    Processor to handle logit bias by adding specified values to token logits.
+    """
+    def __init__(self, logit_bias: Dict[int, float], device: str):
+        self.logit_bias = logit_bias #torch.tensor(logit_bias, device=device)
+
+    def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor) -> torch.FloatTensor:
+        # Add the bias values to the scores for the specified token IDs
+        #for token_id, bias in self.logit_bias.items():
+            #scores[:, token_id] += bias
+        logger.info(f"scores: {scores}")
+        scores[:, 2] += 4 #+= 1 #bias
+        return scores
+
+    def filter(self, indices):
+        # Return None if no bias values are non-zero
+        #if torch.all(self.logit_bias == 0):
+        #    return None
+        #self.logit_bias = self.logit_bias[indices]
+        return self
+
+
