@@ -2021,6 +2021,15 @@ class FlashCausalLM(Model):
             batch.prefilling = not finished_prefilling
             batch.prefilling_mask = next_prefilling_mask
 
+        # After getting logits but before token selection
+        if not prefill:
+            # Modify logits for EOS token if less than 5 tokens generated
+            for i, stopping_criteria in enumerate(batch.stopping_criterias):
+                if stopping_criteria.current_tokens < 5:
+                    # Set probability of EOS token to very low value (-100)
+                    next_token_logits[i, 2] = -100.0  # 2 is the EOS token ID
+
+        # Continue with existing token selection logic
         speculate = get_speculate()
         (
             next_input_ids,
