@@ -637,7 +637,7 @@ class LogitBiasProcessor(LogitsProcessor):
         #for token_id, bias in self.logit_bias.items():
             #scores[:, token_id] += bias
         logger.info(f"scores: {scores}")
-        scores[:, 2] += 4 #+= 1 #bias
+        scores[:, 1060] += 4 #+= 1 #bias
         return scores
 
     def filter(self, indices):

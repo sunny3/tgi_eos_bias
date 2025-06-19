@@ -700,7 +700,7 @@ class CausalLM(Model):
         for i, stopping_criteria in enumerate(batch.stopping_criterias):
             if stopping_criteria.current_tokens < 5:
                 # Set probability of EOS token to very low value (-100)
-                logits[i, -1, 2] = -100.0  # 2 is the EOS token ID
+                logits[i, -1, 1060] = -100.0  # 2 is the EOS token ID
 
         # Results
         generations: List[Generation] = []

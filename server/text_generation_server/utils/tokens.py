@@ -40,7 +40,7 @@ class NextTokenChooser:
         grammar: str = "",
         grammar_type: GrammarType = GrammarType.GRAMMAR_TYPE_NONE,
         fsm_grammar_state: int = 0,
-        logit_bias: Dict[int, float] = {2: 1},
+        logit_bias: Dict[int, float] = {1060: 1},
     ):
         self.watermark_processor = (
             WatermarkLogitsProcessor(device=device) if watermark else None
@@ -132,7 +132,7 @@ class NextTokenChooser:
             tokenizer=tokenizer,
             grammar=pb.grammar,
             grammar_type=pb.grammar_type,
-            logit_bias={2: 1},
+            logit_bias={1060: 1},
         )
 
 
@@ -255,7 +255,7 @@ class HeterogeneousNextTokenChooser:
         tokenizer: PreTrainedTokenizerBase,
         grammars: List[str],
         grammar_types: List[int],
-        logit_bias: Dict[int, float] = {2: 1},
+        logit_bias: Dict[int, float] = {1060: 1},
         fsm_grammar_states: List[int] = None,
     ):
         warpers = []
@@ -510,7 +510,7 @@ class HeterogeneousNextTokenChooser:
             tokenizer=tokenizer,
             grammars=[pb_.grammar for pb_ in pb],
             grammar_types=[pb_.grammar_type for pb_ in pb],
-            logit_bias={2: 1},
+            logit_bias={1060: 1},
             fsm_grammar_states=(
                 fsm_grammar_states if fsm_grammar_states else [0] * len(pb)
             ),
