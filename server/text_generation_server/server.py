@@ -18,7 +18,6 @@ from text_generation_server.utils.adapter import AdapterInfo
 from text_generation_server.utils.prefill_chunking import set_max_prefill_tokens
 
 try:
-    from text_generation_server.models.pali_gemma import PaliGemmaBatch
     from text_generation_server.models.vlm_causal_lm import (
         VlmCausalLMBatch,
     )
@@ -26,7 +25,6 @@ try:
     from text_generation_server.models.mllama_causal_lm import MllamaCausalLMBatch
 
     VLM_BATCH_TYPES = {
-        PaliGemmaBatch,
         VlmCausalLMBatch,
         IdeficsCausalLMBatch,
         MllamaCausalLMBatch,
@@ -68,9 +66,9 @@ class TextGenerationService(generate_pb2_grpc.TextGenerationServiceServicer):
         self.quantize = model.quantize
         self.server_urls = server_urls
         # For some reason, inference_mode does not work well with GLOO which we use on CPU
-        if model.device.type == "cuda":
-            # Force inference mode for the lifetime of TextGenerationService
-            self._inference_mode_raii_guard = torch._C._InferenceMode(True)
+        # if model.device.type == "cuda":
+        #     # Force inference mode for the lifetime of TextGenerationService
+        #     self._inference_mode_raii_guard = torch._C._InferenceMode(True)
 
     async def Info(self, request, context):
         return self.model.info

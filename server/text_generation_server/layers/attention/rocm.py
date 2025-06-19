@@ -5,6 +5,10 @@ from text_generation_server.layers.attention.kv_cache import KVCache, KVScales
 from text_generation_server.utils.import_utils import SYSTEM
 from text_generation_server.layers.attention import Seqlen
 from text_generation_server.utils.log import log_master
+from text_generation_server.models.globals import (
+    ATTENTION,
+    BLOCK_SIZE,
+)
 from loguru import logger
 import vllm._custom_ops as ops
 
@@ -55,6 +59,7 @@ def paged_attention(
     *,
     kv_scales: KVScales,
     softcap: Optional[float] = None,
+    window_size_left: Optional[int] = -1,
 ):
     # Adapted from: https://github.com/vllm-project/vllm/blob/f8a1e39fae05ca610be8d5a78be9d40f5274e5fc/vllm/model_executor/layers/attention.py
     # Copyright 2023 The vLLM team. All rights
@@ -73,11 +78,46 @@ def paged_attention(
     # limitations under the License.
     #
 
+    if ATTENTION == "flashdecoding":
+        max_q = 1
+        max_k = max_s
+        import flash_attn_2_cuda
+
+        window_size_right = -1 if window_size_left == -1 else 0
+
+        if softcap is None:
+            softcap = 0.0
+        out = flash_attn_2_cuda.varlen_fwd(
+            query,
+            kv_cache.key,
+            kv_cache.value,
+            None,
+            seqlen.cu_seqlen_q,
+            seqlen.cu_seqlen_k,
+            None,  # pad_k
+            None,
+            block_tables,
+            None,
+            max_q,
+            max_k,
+            0.0,  # dropout
+            softmax_scale,
+            False,  # zero_tensors
+            True,  # causal
+            window_size_left,  # Window_left
+            window_size_right,  # Window right
+            softcap,
+            False,  # return softmax
+            None,  # generator
+        )
+        return out[0]
+
     if softcap is not None:
         raise RuntimeError("Paged attention doesn't support softcapping")
 
     # value_cache => [num_blocks, num_heads, head_size, block_size]
-    block_size = kv_cache.value.shape[3]
+    # block_size = kv_cache.value.shape[3]
+    block_size = BLOCK_SIZE
     num_seqs, num_heads, head_size = query.shape
 
     num_kv_heads = kv_cache.key.shape[1]
@@ -96,6 +136,15 @@ def paged_attention(
 
     out = torch.empty_like(query)
 
+    if kv_cache.dtype == torch.float8_e4m3fn:
+        key = kv_cache.key.view(torch.uint8)
+        value = kv_cache.value.view(torch.uint8)
+        kv_cache_dtype = "fp8"
+    else:
+        key = kv_cache.key
+        value = kv_cache.value
+        kv_cache_dtype = "auto"
+
     # NOTE(woosuk): We use a simple heuristic to decide whether to use
     # PagedAttention V1 or V2. If the number of partitions is 1, we use
     # V1 to avoid the overhead of reduction. Also, if the number of
@@ -110,8 +159,8 @@ def paged_attention(
         ops.paged_attention_v1(
             out,
             query,
-            kv_cache.key,
-            kv_cache.value,
+            key,
+            value,
             num_kv_heads,
             softmax_scale,
             block_tables,
@@ -119,24 +168,24 @@ def paged_attention(
             block_size,
             max_s,
             None,
-            "auto",
-            1.0,
-            1.0,
+            kv_cache_dtype,
+            kv_scales.key_scale_cpu,
+            kv_scales.value_scale_cpu,
         )
     else:
         # Run PagedAttention V2.
         assert _PARTITION_SIZE % block_size == 0
-        tmp_output = torch.empty(
+        tmp_output = torch.zeros(
             size=(num_seqs, num_heads, max_num_partitions, head_size),
             dtype=out.dtype,
             device=out.device,
         )
-        exp_sums = torch.empty(
+        exp_sums = torch.zeros(
             size=(num_seqs, num_heads, max_num_partitions),
             dtype=torch.float32,
             device=out.device,
         )
-        max_logits = torch.empty_like(exp_sums)
+        max_logits = torch.zeros_like(exp_sums)
 
         if not use_custom:
             ops.paged_attention_v2(
@@ -145,8 +194,8 @@ def paged_attention(
                 max_logits,
                 tmp_output,
                 query,
-                kv_cache.key,
-                kv_cache.value,
+                key,
+                value,
                 num_kv_heads,
                 softmax_scale,
                 block_tables,
@@ -154,9 +203,9 @@ def paged_attention(
                 block_size,
                 max_s,
                 None,
-                "auto",
-                1.0,
-                1.0,
+                kv_cache_dtype,
+                kv_scales.key_scale_cpu,
+                kv_scales.value_scale_cpu,
             )
         else:
             ops.paged_attention_rocm(
@@ -165,8 +214,8 @@ def paged_attention(
                 max_logits,
                 tmp_output,
                 query,
-                kv_cache.key,
-                kv_cache.value,
+                key,
+                value,
                 num_kv_heads,
                 softmax_scale,
                 block_tables,
@@ -174,9 +223,9 @@ def paged_attention(
                 block_size,
                 max_s,
                 None,
-                "auto",
-                1.0,
-                1.0,
+                kv_cache_dtype,
+                kv_scales.key_scale_cpu,
+                kv_scales.value_scale_cpu,
                 None,
                 _PARTITION_SIZE,
             )
@@ -247,14 +296,15 @@ def attention(
         # We do not need to check window_size_left (not supported) here, so it is already checked ahead of time at model load.
         return flash_attn_2_cuda.varlen_fwd(
             query,
-            key,
-            value,
+            # flashdecoding: pass the KV caches, paged: pass the KV.
+            kv_cache.key if ATTENTION == "flashdecoding" else key,
+            kv_cache.value if ATTENTION == "flashdecoding" else value,
             out,
             seqlen.cu_seqlen_q,
-            seqlen.cu_seqlen_q,
+            seqlen.cu_seqlen_k,
             None,
             None,
-            None,
+            block_tables if ATTENTION == "flashdecoding" else None,
             None,
             seqlen.max_q,
             seqlen.max_k,

@@ -102,17 +102,17 @@
         "flake-parts": "flake-parts_3",
         "nix-test-runner": "nix-test-runner_3",
         "nixpkgs": [
-          "tgi-nix",
+          "hf-nix",
           "nixpkgs"
         ],
         "pre-commit-hooks": "pre-commit-hooks_3"
       },
       "locked": {
-        "lastModified": 1732039290,
-        "narHash": "sha256-LQKY7bShf2H9kJouxa9ZspfdrulnZF9o4kLTqGqCDYM=",
+        "lastModified": 1739473963,
+        "narHash": "sha256-ItAhpjNUzEWd/cgZVyW/jvoGbCec4TK29e1Mnmn1oJE=",
         "owner": "nix-community",
         "repo": "crate2nix",
-        "rev": "9ff208ce7f5a482272b1bcefbe363c772d7ff914",
+        "rev": "be31feae9a82c225c0fd1bdf978565dc452a483a",
         "type": "github"
       },
       "original": {
@@ -305,11 +305,11 @@
     },
     "flake-compat_4": {
       "locked": {
-        "lastModified": 1696426674,
-        "narHash": "sha256-kvjfFW7WAETZlt09AgDn1MrtKzP7t90Vf7vypd3OL1U=",
+        "lastModified": 1733328505,
+        "narHash": "sha256-NeCCThCEP3eCl2l/+27kNNK7QrwZB1IJCrXfrbv5oqU=",
         "owner": "edolstra",
         "repo": "flake-compat",
-        "rev": "0f9255e01c2351cc7d116c072cb317785dd33b33",
+        "rev": "ff81ac966bb2cae68946d5ed5fc4994f96d0ffec",
         "type": "github"
       },
       "original": {
@@ -579,6 +579,26 @@
         "type": "github"
       }
     },
+    "hf-nix": {
+      "inputs": {
+        "flake-compat": "flake-compat_4",
+        "flake-utils": "flake-utils_7",
+        "nixpkgs": "nixpkgs_6"
+      },
+      "locked": {
+        "lastModified": 1747919133,
+        "narHash": "sha256-VvF1naQOvv7yulQ5/cDiaxkNxlh1Y84QMZnderv1szk=",
+        "owner": "huggingface",
+        "repo": "hf-nix",
+        "rev": "9c71e026d6c7c8588ef85a5f7c77f57d598e038c",
+        "type": "github"
+      },
+      "original": {
+        "owner": "huggingface",
+        "repo": "hf-nix",
+        "type": "github"
+      }
+    },
     "nix-filter": {
       "locked": {
         "lastModified": 1731533336,
@@ -718,16 +738,16 @@
     },
     "nixpkgs_6": {
       "locked": {
-        "lastModified": 1732034459,
-        "narHash": "sha256-Zais/zMRuJdlALidkUgEuasXOd37ZZLqkPkF9bIYSrY=",
+        "lastModified": 1747820358,
+        "narHash": "sha256-fTqsZsUX6M3yeEvgyQvXcbGmT2CaRVyVwsi8eK29Oj4=",
         "owner": "danieldk",
         "repo": "nixpkgs",
-        "rev": "40280e7bf9743cdf563494db4ece2a43aa674fa8",
+        "rev": "d3c1681180717528068082103bf323147de6ab0b",
         "type": "github"
       },
       "original": {
         "owner": "danieldk",
-        "ref": "outlines-v0.1.4-tgi",
+        "ref": "cudatoolkit-12.9-kernel-builder",
         "repo": "nixpkgs",
         "type": "github"
       }
@@ -836,28 +856,28 @@
       "inputs": {
         "crate2nix": "crate2nix",
         "flake-utils": "flake-utils_6",
+        "hf-nix": "hf-nix",
         "nix-filter": "nix-filter",
         "nixpkgs": [
-          "tgi-nix",
+          "hf-nix",
           "nixpkgs"
         ],
-        "rust-overlay": "rust-overlay",
-        "tgi-nix": "tgi-nix"
+        "rust-overlay": "rust-overlay"
       }
     },
     "rust-overlay": {
       "inputs": {
         "nixpkgs": [
-          "tgi-nix",
+          "hf-nix",
           "nixpkgs"
         ]
       },
       "locked": {
-        "lastModified": 1732242723,
-        "narHash": "sha256-NWI8csIK0ujFlFuEXKnoc+7hWoCiEtINK9r48LUUMeU=",
+        "lastModified": 1743993291,
+        "narHash": "sha256-u8GHvduU1gCtoFXvTS/wGjH1ouv5S/GRGq6MAT+sG/k=",
         "owner": "oxalica",
         "repo": "rust-overlay",
-        "rev": "a229311fcb45b88a95fdfa5cecd8349c809a272a",
+        "rev": "0cb3c8979c65dc6a5812dfe67499a8c7b8b4325b",
         "type": "github"
       },
       "original": {
@@ -968,26 +988,6 @@
       "original": {
         "owner": "nix-systems",
         "repo": "default",
-        "type": "github"
-      }
-    },
-    "tgi-nix": {
-      "inputs": {
-        "flake-compat": "flake-compat_4",
-        "flake-utils": "flake-utils_7",
-        "nixpkgs": "nixpkgs_6"
-      },
-      "locked": {
-        "lastModified": 1732218602,
-        "narHash": "sha256-BElslL34KjOJCFMPkNtilOz6S/7iY7Vd72FNbRRWKDY=",
-        "owner": "huggingface",
-        "repo": "text-generation-inference-nix",
-        "rev": "f79638ac4e420e661321261744e745a3a747e182",
-        "type": "github"
-      },
-      "original": {
-        "owner": "huggingface",
-        "repo": "text-generation-inference-nix",
         "type": "github"
       }
     }
